@@ -17,7 +17,7 @@ class ChibiView(context: Context, private val onMove: (Float, Float) -> Unit,
     }
     private val pictures = mutableMapOf<String, Bitmap>()
     private val started = SystemClock.uptimeMillis()
-    private val expressions = listOf("rema_menyapa", "rema_senang", "rema_sedih", "rema_ketawa", "rema_penasaran", "rema_marah")
+    private val expressions = listOf("rema_menyapa", "rema_senang", "rema_ketawa", "rema_tidur")
     private var expression = 0
     private var downX = 0f; private var downY = 0f
     private var prevX = 0f; private var prevY = 0f
@@ -26,8 +26,7 @@ class ChibiView(context: Context, private val onMove: (Float, Float) -> Unit,
         .getString("username", "Teman")?.ifBlank { "Teman" } ?: "Teman"
 
     init {
-        val files = expressions + listOf("portal_open", "portal_idle", "portal_close") +
-            (1..6).map { "rema_muncul_%02d".format(it) }
+        val files = expressions + listOf("portal_open")
         for (file in files) try {
             context.assets.open("$file.png").use { pictures[file] = BitmapFactory.decodeStream(it) }
         } catch (_: Exception) { }
@@ -48,18 +47,19 @@ class ChibiView(context: Context, private val onMove: (Float, Float) -> Unit,
         val character = RectF(w*.10f, h*.26f, w*.90f, h*.96f)
         if (elapsed < 3400L) {
             val portalAlpha = when {
-                elapsed < 450 -> (elapsed / 450f * 255).toInt()
-                elapsed > 2650 -> ((3400-elapsed)/750f*255).toInt()
+                elapsed < 450L -> (elapsed / 450f * 255).toInt()
+                elapsed > 2650L -> ((3400L - elapsed) / 750f * 255).toInt()
                 else -> 255
-            }
-            drawPicture(canvas, "portal_open", RectF(w*.12f,h*.18f,w*.88f,h*.94f), portalAlpha)
-            if (elapsed > 700) {
-                val frame = (((elapsed-700)/350).toInt()+1).coerceIn(1,6)
-                drawPicture(canvas,"rema_muncul_%02d".format(frame),character)
+            }.coerceIn(0, 255)
+            drawPicture(canvas, "portal_open", RectF(w*.12f, h*.18f, w*.88f, h*.94f), portalAlpha)
+            if (elapsed >= 700L) {
+                val progress = ((elapsed - 700L) / 900f).coerceIn(0f, 1f)
+                character.offset(0f, (1f - progress) * h * .20f)
+                drawPicture(canvas, "rema_menyapa", character, (progress * 255).toInt())
             }
         } else {
             val bob = sin(elapsed / 420.0).toFloat()*3f*resources.displayMetrics.density
-            character.offset(0f,bob)
+            character.offset(0f, bob)
             drawPicture(canvas, expressions[expression], character)
         }
         val message = when (elapsed) {
