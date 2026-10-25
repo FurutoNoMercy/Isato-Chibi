@@ -32,7 +32,7 @@ class FloatingService : Service() {
         if (!Settings.canDrawOverlays(this)) { stopSelf();return }
         wm=getSystemService(WINDOW_SERVICE) as WindowManager
         params=WindowManager.LayoutParams(
-            dp(172),dp(240),
+            dp(300),dp(360),
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,

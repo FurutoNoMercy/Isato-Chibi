@@ -2,121 +2,116 @@ package com.isato.chibi
 
 import android.content.Context
 import android.graphics.*
-import android.view.*
-import kotlin.math.*
+import android.os.SystemClock
+import android.view.MotionEvent
+import android.view.View
+import kotlin.math.abs
+import kotlin.math.sin
 
-class ChibiView(context:Context, val onMove:(Float,Float)->Unit,
-    val onLongPress:()->Unit):View(context) {
-    private val paint=Paint(Paint.ANTI_ALIAS_FLAG)
-    private val blue=Color.rgb(127,178,241)
-    private val pink=Color.rgb(245,139,179)
-    private val skin=Color.rgb(255,225,211)
-    private val navy=Color.rgb(58,72,109)
-    private var expression=0
-    private var downX=0f; private var downY=0f
-    private var prevX=0f; private var prevY=0f
-    private var downAt=0L;private var dragged=false
-    private val start=System.currentTimeMillis()
-    private fun color(c:Int){paint.color=c;paint.style=Paint.Style.FILL;paint.strokeWidth=1f}
-    private fun oval(c:Canvas,l:Float,t:Float,r:Float,b:Float,col:Int){
-        color(col);c.drawOval(l,t,r,b,paint)
+class ChibiView(context: Context, private val onMove: (Float, Float) -> Unit,
+                private val onLongPress: () -> Unit) : View(context) {
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(35, 51, 81); textSize = 13f * resources.displayMetrics.scaledDensity
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
-    private fun line(c:Canvas,x:Float,y:Float,x2:Float,y2:Float,col:Int,w:Float){
-        color(col);paint.strokeWidth=w;paint.strokeCap=Paint.Cap.ROUND
-        c.drawLine(x,y,x2,y2,paint)
+    private val pictures = mutableMapOf<String, Bitmap>()
+    private val started = SystemClock.uptimeMillis()
+    private val expressions = listOf("rema_menyapa", "rema_senang", "rema_sedih", "rema_ketawa", "rema_penasaran", "rema_marah")
+    private var expression = 0
+    private var downX = 0f; private var downY = 0f
+    private var prevX = 0f; private var prevY = 0f
+    private var downTime = 0L; private var moved = false
+    private val username = context.getSharedPreferences("rema", Context.MODE_PRIVATE)
+        .getString("username", "Teman")?.ifBlank { "Teman" } ?: "Teman"
+
+    init {
+        val files = expressions + listOf("portal_open", "portal_idle", "portal_close") +
+            (1..6).map { "rema_muncul_%02d".format(it) }
+        for (file in files) try {
+            context.assets.open("$file.png").use { pictures[file] = BitmapFactory.decodeStream(it) }
+        } catch (_: Exception) { }
     }
-    private fun path(c:Canvas, col:Int, vararg pts:Float){
-        val p=Path();p.moveTo(pts[0],pts[1])
-        for(i in 2 until pts.size step 2)p.lineTo(pts[i],pts[i+1])
-        p.close();color(col);c.drawPath(p,paint)
+    private fun drawPicture(canvas: Canvas, name: String, rect: RectF, alpha: Int = 255) {
+        val image = pictures[name] ?: return
+        paint.alpha = alpha.coerceIn(0, 255)
+        val scale = minOf(rect.width() / image.width, rect.height() / image.height)
+        val dw = image.width * scale; val dh = image.height * scale
+        val dst = RectF(rect.centerX()-dw/2, rect.centerY()-dh/2, rect.centerX()+dw/2, rect.centerY()+dh/2)
+        canvas.drawBitmap(image, null, dst, paint)
+        paint.alpha = 255
     }
-    override fun onDraw(canvas:Canvas) {
+    override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        val time=(System.currentTimeMillis()-start)/1000f
-        val w=width/172f;val h=height/240f
-        canvas.save();canvas.scale(w,h)
-        val bounce=sin(time*2.5f)*2.2f
-        canvas.translate(0f,bounce)
-        // hair behind head
-        oval(canvas,29f,17f,146f,148f,blue)
-        // legs and shoes
-        oval(canvas,67f,188f,82f,220f,skin);oval(canvas,94f,188f,109f,220f,skin)
-        oval(canvas,57f,213f,84f,229f,navy);oval(canvas,92f,213f,120f,229f,navy)
-        // pleated skirt
-        path(canvas,Color.rgb(106,121,154),52f,163f,122f,163f,134f,194f,40f,194f)
-        for(x in listOf(57f,75f,95f,114f))
-            line(canvas,x,169f,x+(x-87f)*.18f,191f,Color.rgb(78,91,130),1.6f)
-        // arms
-        oval(canvas,35f,146f,57f,193f,skin);oval(canvas,119f,146f,141f,193f,skin)
-        // shirt
-        path(canvas,Color.WHITE,56f,137f,117f,137f,128f,173f,45f,173f)
-        path(canvas,Color.rgb(228,233,246),75f,139f,87f,156f,99f,139f)
-        path(canvas,navy,85f,150f,94f,150f,91f,169f,86f,172f,82f,169f)
-        // head
-        oval(canvas,34f,31f,141f,146f,skin)
-        // side hair
-        oval(canvas,27f,57f,52f,148f,blue);oval(canvas,124f,57f,150f,148f,blue)
-        // eyes
-        val blink=(time%4.5f)>4.34f
-        for(x in listOf(65f,112f)) {
-            oval(canvas,x-12,89f,x+12,112f,Color.WHITE)
-            if(blink)line(canvas,x-10,101f,x+10,101f,navy,3f)
-            else {
-                oval(canvas,x-7,92f,x+7,111f,Color.rgb(60,128,207))
-                oval(canvas,x-3,95f,x+3,106f,navy)
-                oval(canvas,x-5,94f,x-1,99f,Color.WHITE)
+        val elapsed = SystemClock.uptimeMillis() - started
+        val w = width.toFloat(); val h = height.toFloat()
+        val character = RectF(w*.10f, h*.26f, w*.90f, h*.96f)
+        if (elapsed < 3400L) {
+            val portalAlpha = when {
+                elapsed < 450 -> (elapsed / 450f * 255).toInt()
+                elapsed > 2650 -> ((3400-elapsed)/750f*255).toInt()
+                else -> 255
             }
-        }
-        oval(canvas,83f,115f,92f,119f,Color.rgb(246,167,174))
-        if(expression==1){
-            oval(canvas,82f,125f,94f,137f,Color.rgb(171,79,107))
-        } else if(expression==2) {
-            line(canvas,81f,133f,94f,130f,Color.rgb(150,75,96),2.5f)
+            drawPicture(canvas, "portal_open", RectF(w*.12f,h*.18f,w*.88f,h*.94f), portalAlpha)
+            if (elapsed > 700) {
+                val frame = (((elapsed-700)/350).toInt()+1).coerceIn(1,6)
+                drawPicture(canvas,"rema_muncul_%02d".format(frame),character)
+            }
         } else {
-            line(canvas,80f,127f,87f,132f,Color.rgb(175,88,111),2.5f)
-            line(canvas,87f,132f,96f,127f,Color.rgb(175,88,111),2.5f)
+            val bob = sin(elapsed / 420.0).toFloat()*3f*resources.displayMetrics.density
+            character.offset(0f,bob)
+            drawPicture(canvas, expressions[expression], character)
         }
-        // hair cap and asymmetrical fringe
-        oval(canvas,28f,17f,146f,73f,blue)
-        path(canvas,blue,28f,55f,70f,28f,100f,36f,80f,92f,39f,91f)
-        path(canvas,Color.rgb(150,198,249),96f,28f,142f,49f,130f,106f,99f,97f,108f,62f)
-        // pink cross clip
-        line(canvas,112f,52f,133f,73f,pink,5f)
-        line(canvas,133f,52f,112f,73f,pink,5f)
-        // ribbon
-        oval(canvas,132f,85f,148f,98f,pink)
-        oval(canvas,146f,85f,160f,98f,pink)
-        oval(canvas,143f,87f,150f,96f,Color.rgb(232,105,158))
-        // flower
-        for(i in 0..4){
-            val a=i*2*PI/5
-            oval(canvas,(46+cos(a)*9-6).toFloat(),(43+sin(a)*9-6).toFloat(),
-                (46+cos(a)*9+6).toFloat(),(43+sin(a)*9+6).toFloat(),Color.WHITE)
+        val message = when (elapsed) {
+            in 3600..6700 -> "Haloo! Aku Rema, gadis SMA asal Indonesia!"
+            in 7100..10500 -> "Senang bertemu denganmu, Tuan $username!"
+            else -> null
         }
-        oval(canvas,42f,39f,50f,47f,Color.rgb(246,209,107))
-        canvas.restore()
-        postInvalidateDelayed(33)
-    }
-    override fun onTouchEvent(e:android.view.MotionEvent):Boolean {
-        when(e.actionMasked){
-            MotionEvent.ACTION_DOWN -> {
-                downX=e.rawX;downY=e.rawY;prevX=e.rawX;prevY=e.rawY
-                downAt=System.currentTimeMillis();dragged=false;return true
+        if (message != null) {
+            val fade = when {
+                elapsed in 3600..4000 -> ((elapsed-3600)/400f)
+                elapsed in 6300..6700 -> ((6700-elapsed)/400f)
+                elapsed in 7100..7500 -> ((elapsed-7100)/400f)
+                elapsed in 10100..10500 -> ((10500-elapsed)/400f)
+                else -> 1f
+            }.coerceIn(0f,1f)
+            paint.color=Color.WHITE; paint.alpha=(235*fade).toInt()
+            val bubble=RectF(6f,h*.03f,w-6f,h*.23f)
+            canvas.drawRoundRect(bubble,16f,16f,paint)
+            textPaint.alpha=(255*fade).toInt()
+            val words=message.split(" "); var line=""; val lines=mutableListOf<String>()
+            for (word in words) {
+                val next=if(line.isEmpty()) word else "$line $word"
+                if(textPaint.measureText(next)>w-32f && line.isNotEmpty()) { lines.add(line);line=word } else line=next
             }
+            if(line.isNotEmpty())lines.add(line)
+            lines.take(3).forEachIndexed { i, str -> canvas.drawText(str, 16f, h*.09f+i*textPaint.textSize*1.2f, textPaint) }
+            textPaint.alpha=255;paint.alpha=255
+        }
+        postInvalidateDelayed(50L)
+    }
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        when(event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {downX=event.rawX;downY=event.rawY;prevX=downX;prevY=downY;downTime=SystemClock.uptimeMillis();moved=false;return true}
             MotionEvent.ACTION_MOVE -> {
-                val dx=e.rawX-prevX;val dy=e.rawY-prevY
-                if(abs(e.rawX-downX)+abs(e.rawY-downY)>12)dragged=true
-                if(dragged)onMove(dx,dy)
-                prevX=e.rawX;prevY=e.rawY;return true
+                val dx=event.rawX-prevX;val dy=event.rawY-prevY
+                if(abs(event.rawX-downX)+abs(event.rawY-downY)>14f) moved=true
+                if(moved) onMove(dx,dy)
+                prevX=event.rawX;prevY=event.rawY;return true
             }
             MotionEvent.ACTION_UP -> {
-                if(!dragged) {
-                    if(System.currentTimeMillis()-downAt>650)onLongPress()
-                    else {expression=(expression+1)%3;invalidate()}
+                if(!moved) {
+                    if(SystemClock.uptimeMillis()-downTime>650L) onLongPress()
+                    else { expression=(expression+1)%expressions.size;invalidate() }
                 }
                 return true
             }
         }
         return true
+    }
+    override fun onDetachedFromWindow() {
+        pictures.values.forEach { if(!it.isRecycled) it.recycle() }
+        pictures.clear()
+        super.onDetachedFromWindow()
     }
 }
