@@ -23,13 +23,13 @@ class MainActivity : Activity() {
 
 if (!prefs.getBoolean("beta_notice_shown", false)) {
     AlertDialog.Builder(this)
-        .setTitle("💙 Rema Assistant — BETA v0.2")
+        .setTitle("Rema Assistant — BETA v0.2")
         .setMessage(
             "⚠️ Aplikasi Masih Dalam Pengembangan\n\n" +
             "Halo! Selamat datang di Rema Assistant.\n\n" +
             "Aplikasi ini masih dalam tahap pembuatan dan pengujian. " +
             "Beberapa fitur mungkin belum berjalan dengan sempurna.\n\n" +
-            "Terima kasih sudah mencoba aplikasi ini! 💙\n\n" +
+            "Arigathanks! 💙\n\n" +
             "Made by IsatoPrjj"
         )
         .setPositiveButton("Mengerti") { _, _ ->
@@ -47,7 +47,7 @@ if (!prefs.getBoolean("beta_notice_shown", false)) {
         fun label(value:String, size:Float):TextView = TextView(this).apply {
             text=value;textSize=size;setTextColor(Color.rgb(35,55,88));setPadding(0,4,0,12)
         }
-        layout.addView(label("💙 Isato Chibi — Rema V0.2",24f))
+        layout.addView(label("Isato Project — Rema V0.2",24f))
         layout.addView(label("Nama panggilan:",15f))
         val name=EditText(this).apply {
             setSingleLine(true);setText(prefs.getString("username",""));hint="Masukkan nama kamu"
