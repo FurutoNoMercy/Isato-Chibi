@@ -18,6 +18,26 @@ class MainActivity : Activity() {
     private val prefs by lazy { getSharedPreferences("rema", MODE_PRIVATE) }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val prefs = getSharedPreferences("rema_settings", MODE_PRIVATE)
+
+if (!prefs.getBoolean("beta_notice_shown", false)) {
+    AlertDialog.Builder(this)
+        .setTitle("💙 Rema Assistant — BETA v0.2")
+        .setMessage(
+            "⚠️ Aplikasi Masih Dalam Pengembangan\n\n" +
+            "Halo! Selamat datang di Rema Assistant.\n\n" +
+            "Aplikasi ini masih dalam tahap pembuatan dan pengujian. " +
+            "Beberapa fitur mungkin belum berjalan dengan sempurna.\n\n" +
+            "Terima kasih sudah mencoba aplikasi ini! 💙\n\n" +
+            "Made by IsatoPrjj"
+        )
+        .setPositiveButton("Mengerti") { _, _ ->
+            prefs.edit()
+                .putBoolean("beta_notice_shown", true)
+                .apply()
+        }
+        .show()
+}
         val layout=LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL
             setPadding(24,40,24,32)
