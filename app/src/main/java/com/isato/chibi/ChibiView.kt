@@ -63,7 +63,7 @@ class ChibiView(context: Context, private val onMove: (Float, Float) -> Unit,
             drawPicture(canvas, expressions[expression], character)
         }
         val message = when (elapsed) {
-            in 3600..6700 -> "Haloo! Aku Rema, gadis SMA asal Indonesia!"
+            in 3600..6700 -> "Haloo! Aku Remu, yoroshikuu!"
             in 7100..10500 -> "Senang bertemu denganmu, Tuan $username!"
             else -> null
         }
