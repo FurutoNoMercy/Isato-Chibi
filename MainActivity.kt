@@ -22,7 +22,7 @@ class MainActivity : Activity() {
         val betaPrefs = getSharedPreferences("rema_settings", MODE_PRIVATE)
         if (!betaPrefs.getBoolean("beta_notice_shown", false)) {
             AlertDialog.Builder(this)
-                .setTitle("💙 Rema Assistant — BETA v0.3")
+                .setTitle("Rema Assistant — BETA v0.3")
                 .setMessage("⚠️ Aplikasi Masih Dalam Pengembangan\n\nHalo! Selamat datang di Rema Assistant.\n\nAplikasi ini masih dalam tahap pembuatan dan pengujian. Beberapa fitur mungkin belum berjalan dengan sempurna.\n\nTerima kasih sudah mencoba aplikasi ini! 💙\n\nMade by IsatoPrjj")
                 .setPositiveButton("Mengerti") { _, _ ->
                     betaPrefs.edit().putBoolean("beta_notice_shown", true).apply()
