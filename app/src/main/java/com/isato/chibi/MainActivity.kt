@@ -100,7 +100,7 @@ class MainActivity : Activity() {
         }
         content.addView(image, LinearLayout.LayoutParams(-1, dp(185)))
         content.addView(text("Rema • Chat lokal", 15f, true).apply { gravity = Gravity.CENTER })
-        val scroll = ScrollView(this).apply { fillViewport = true }
+        val scroll = ScrollView(this).apply { isFillViewport = true }
         val messages = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(4), dp(4), dp(4), dp(4)) }
         scroll.addView(messages)
         content.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
